@@ -101,10 +101,10 @@ class URL(object):
         self._host = host
         self._port = port
         self._path = path or '/'
-        self._params = re.sub(r'^;+', '', str(params))
+        self._params = re.sub(r'^;+', '', params)
         self._params = re.sub(r'^;|;$', '', re.sub(r';{2,}', ';', self._params))
         # Strip off extra leading ?'s
-        self._query = re.sub(r'^\?+', '', str(query))
+        self._query = re.sub(r'^\?+', '', query)
         self._query = re.sub(r'^&|&$', '', re.sub(r'&{2,}', '&', self._query))
         self._fragment = fragment
         self._userinfo = userinfo
@@ -285,9 +285,8 @@ class URL(object):
         if self._userinfo is not None:
             netloc = '%s@%s' % (self._userinfo, netloc)
 
-        result = urlunparse((str(self._scheme), str(netloc),
-            str(self._path), str(self._params), str(self._query),
-            self._fragment))
+        result = urlunparse((self._scheme, netloc, self._path, self._params,
+                            self._query, self._fragment))
         if encoding != 'utf-8':
             result = result.decode('utf-8').encode(encoding)
 
