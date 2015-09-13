@@ -48,7 +48,7 @@ def test_deparam_case_insensitivity():
 def test_filter_params():
     def function(name, value):
         '''Only keep even-valued parameters.'''
-        print "%s = %s" % (name, value)
+        print("%s = %s" % (name, value))
         return int(value) % 2
 
     def test(bad, good):
