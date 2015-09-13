@@ -26,10 +26,10 @@
 import re
 import urllib
 try:
-    import urlparse
+    from urlparse import urlparse, urlunparse, urljoin
 except ImportError:  # pragma: no cover
     # Python 3 support
-    import urllib.parse as urlparse
+    from urllib.parse import urlparse, urlunparse, urljoin
 
 # For publicsuffix utilities
 from publicsuffix import PublicSuffixList
@@ -74,10 +74,9 @@ class URL(object):
     def parse(cls, url, encoding):
         '''Parse the provided url, and return a URL instance'''
         if isinstance(url, str):
-            parsed = urlparse.urlparse(
-                url.decode(encoding).encode('utf-8'))
+            parsed = urlparse(url.decode(encoding).encode('utf-8'))
         else:
-            parsed = urlparse.urlparse(url.encode('utf-8'))
+            parsed = urlparse(url.encode('utf-8'))
 
         try:
             port = parsed.port
@@ -283,7 +282,7 @@ class URL(object):
         if self._userinfo is not None:
             netloc = '%s@%s' % (self._userinfo, netloc)
 
-        result = urlparse.urlunparse((str(self._scheme), str(netloc),
+        result = urlunparse((str(self._scheme), str(netloc),
             str(self._path), str(self._params), str(self._query),
             self._fragment))
         return result.decode('utf-8').encode(encoding)
@@ -291,10 +290,10 @@ class URL(object):
     def relative(self, path, encoding='utf-8'):
         '''Evaluate the new path relative to the current url'''
         if not isinstance(path, str):
-            newurl = urlparse.urljoin(self.utf8(),
+            newurl = urljoin(self.utf8(),
                 str(path).decode(encoding).encode('utf-8'))
         else:
-            newurl = urlparse.urljoin(self.utf8(), path.encode('utf-8'))
+            newurl = urljoin(self.utf8(), path.encode('utf-8'))
         return URL.parse(newurl, 'utf-8')
 
     def punycode(self):
