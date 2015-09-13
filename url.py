@@ -24,11 +24,14 @@
 '''This is a module for dealing with urls. In particular, sanitizing them.'''
 
 import re
-import urllib
 try:
+    from urllib import quote as urlquote
+    from urllib import unquote as urlunquote
     from urlparse import urlparse, urlunparse, urljoin
 except ImportError:  # pragma: no cover
     # Python 3 support
+    from urllib.parse import quote as urlquote
+    from urllib.parse import unquote as urlunquote
     from urllib.parse import urlparse, urlunparse, urljoin
 
 # For publicsuffix utilities
@@ -251,26 +254,23 @@ class URL(object):
                 self._userinfo = self.percent_encode(self._userinfo, URL.USERINFO)
             return self
         else:
-            self._path = urllib.quote(
-                urllib.unquote(self._path), safe=URL.PATH)
+            self._path = urlquote(urlunquote(self._path), safe=URL.PATH)
             # Safe characters taken from:
             #    http://tools.ietf.org/html/rfc3986#page-50
-            self._query = urllib.quote(urllib.unquote(self._query),
-                safe=URL.QUERY)
+            self._query = urlquote(urlunquote(self._query), safe=URL.QUERY)
             # The safe characters for URL parameters seemed a little more vague.
             # They are interpreted here as *pchar despite this page, since the
             # updated RFC seems to offer no replacement
             #    http://tools.ietf.org/html/rfc3986#page-54
-            self._params = urllib.quote(urllib.unquote(self._params),
-                safe=URL.QUERY)
+            self._params = urlquote(urlunquote(self._params), safe=URL.QUERY)
             if self._userinfo:
-                self._userinfo = urllib.quote(urllib.unquote(self._userinfo),
+                self._userinfo = urlquote(urlunquote(self._userinfo),
                     safe=URL.USERINFO)
             return self
 
     def unescape(self):
         '''Unescape the path'''
-        self._path = urllib.unquote(self._path)
+        self._path = urlunquote(self._path)
         return self
 
     def encode(self, encoding):
