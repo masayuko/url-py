@@ -39,8 +39,6 @@ psl = PublicSuffixList()
 # Come codes that we'll need
 IDNA = codecs.lookup('idna')
 UTF8 = codecs.lookup('utf-8')
-ASCII = codecs.lookup('ascii')
-W1252 = codecs.lookup('windows-1252')
 
 # The default ports associated with each scheme
 PORTS = {
