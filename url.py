@@ -33,6 +33,7 @@ except ImportError:  # pragma: no cover
     from urllib.parse import quote as urlquote
     from urllib.parse import unquote as urlunquote
     from urllib.parse import urlparse, urlunparse, urljoin
+from unicodedata import normalize as unicodenormalize
 
 # For publicsuffix utilities
 from publicsuffix import PublicSuffixList
@@ -77,10 +78,8 @@ class URL(object):
     def parse(cls, url, encoding):
         '''Parse the provided url, and return a URL instance'''
         if isinstance(url, str):
-            if encoding != 'utf-8':
-                url = url.decode(encoding).encode('utf-8')
-        else:
-            url = url.encode('utf-8')
+            url = url.decode(encoding)
+        url = unicodenormalize('NFC', url).encode('utf-8')
 
         parsed = urlparse(url)
 
@@ -295,10 +294,8 @@ class URL(object):
     def relative(self, path, encoding='utf-8'):
         '''Evaluate the new path relative to the current url'''
         if isinstance(path, str):
-            if encoding != 'utf-8':
-                path = path.decode(encoding).encode('utf-8')
-        else:
-            path = path.encode('utf-8')
+            path = path.decode(encoding)
+        path = unicodenormalize('NFC', path).encode('utf-8')
 
         newurl = urljoin(self.utf8(), path)
 
