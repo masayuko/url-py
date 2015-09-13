@@ -24,7 +24,6 @@
 '''This is a module for dealing with urls. In particular, sanitizing them.'''
 
 import re
-import codecs
 import urllib
 try:
     import urlparse
@@ -35,10 +34,6 @@ except ImportError:  # pragma: no cover
 # For publicsuffix utilities
 from publicsuffix import PublicSuffixList
 psl = PublicSuffixList()
-
-# Come codes that we'll need
-IDNA = codecs.lookup('idna')
-UTF8 = codecs.lookup('utf-8')
 
 # The default ports associated with each scheme
 PORTS = {
@@ -229,7 +224,7 @@ class URL(object):
     @staticmethod
     def percent_encode(raw, safe):
         if isinstance(raw, unicode):
-            raw = UTF8.encode(raw)[0]
+            raw = raw.encode('utf-8')
 
         def replacement(match):
             string = match.group(1)
@@ -305,15 +300,14 @@ class URL(object):
     def punycode(self):
         '''Convert to punycode hostname'''
         if self._host:
-            self._host = IDNA.encode(self._host.decode('utf-8'))[0]
+            self._host = self._host.decode('utf-8').encode('idna')
             return self
         raise TypeError('Cannot punycode a relative url (%s)' % repr(self))
 
     def unpunycode(self):
         '''Convert to an unpunycoded hostname'''
         if self._host:
-            self._host = IDNA.decode(
-                self._host.decode('utf-8'))[0].encode('utf-8')
+            self._host = self._host.decode('utf-8').decode('idna').encode('utf-8')
             return self
         raise TypeError('Cannot unpunycode a relative url (%s)' % repr(self))
 
