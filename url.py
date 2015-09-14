@@ -24,15 +24,21 @@
 '''This is a module for dealing with urls. In particular, sanitizing them.'''
 
 import re
-try:
-    from urllib import quote as urlquote
-    from urllib import unquote as urlunquote
-    from urlparse import urlparse, urlunparse, urljoin
-except ImportError:  # pragma: no cover
-    # Python 3 support
+import sys
+if sys.version_info[0] == 3:
     from urllib.parse import quote as urlquote
     from urllib.parse import unquote as urlunquote
     from urllib.parse import urlparse, urlunparse, urljoin
+    byte_string = bytes
+    string_type = (str, bytes)
+    unicode_text = str
+else:
+    from urllib import quote as urlquote
+    from urllib import unquote as urlunquote
+    from urlparse import urlparse, urlunparse, urljoin
+    byte_string = str
+    string_type = basestring
+    unicode_text = unicode
 from unicodedata import normalize as unicodenormalize
 
 # For publicsuffix utilities
@@ -77,9 +83,11 @@ class URL(object):
     @classmethod
     def parse(cls, url, encoding):
         '''Parse the provided url, and return a URL instance'''
-        if isinstance(url, str):
+        if isinstance(url, byte_string):
             url = url.decode(encoding)
-        url = unicodenormalize('NFC', url).encode('utf-8')
+        url = unicodenormalize('NFC', url)
+        if sys.version_info[0] == 2:
+            url = url.encode('utf-8')
 
         parsed = urlparse(url)
 
@@ -96,20 +104,36 @@ class URL(object):
             parsed.path, parsed.params, parsed.query, parsed.fragment, userinfo)
 
     def __init__(self, scheme, host, port, path, params, query, fragment, userinfo=None):
-        if isinstance(scheme, unicode):
-            scheme = scheme.encode('utf-8')
-        if isinstance(host, unicode):
-            host = host.encode('utf-8')
-        if isinstance(path, unicode):
-            path = path.encode('utf-8')
-        if isinstance(params, unicode):
-            params = params.encode('utf-8')
-        if isinstance(query, unicode):
-            query = query.encode('utf-8')
-        if isinstance(fragment, unicode):
-            fragment = fragment.encode('utf-8')
-        if isinstance(userinfo, unicode):
-            userinfo = userinfo.encode('utf-8')
+        if sys.version_info[0] == 3:
+            if isinstance(scheme, byte_string):
+                scheme = scheme.decode('utf-8')
+            if isinstance(host, byte_string):
+                host = host.decode('utf-8')
+            if isinstance(path, byte_string):
+                path = path.decode('utf-8')
+            if isinstance(params, byte_string):
+                params = params.decode('utf-8')
+            if isinstance(query, byte_string):
+                query = query.decode('utf-8')
+            if isinstance(fragment, byte_string):
+                fragment = fragment.decode('utf-8')
+            if isinstance(userinfo, byte_string):
+                userinfo = userinfo.decode('utf-8')
+        else:
+            if isinstance(scheme, unicode_text):
+                scheme = scheme.encode('utf-8')
+            if isinstance(host, unicode_text):
+                host = host.encode('utf-8')
+            if isinstance(path, unicode_text):
+                path = path.encode('utf-8')
+            if isinstance(params, unicode_text):
+                params = params.encode('utf-8')
+            if isinstance(query, unicode_text):
+                query = query.encode('utf-8')
+            if isinstance(fragment, unicode_text):
+                fragment = fragment.encode('utf-8')
+            if isinstance(userinfo, unicode_text):
+                userinfo = userinfo.encode('utf-8')
         self._scheme = scheme
         self._host = host
         self._port = port
@@ -124,12 +148,12 @@ class URL(object):
 
     def equiv(self, other):
         '''Return true if this url is equivalent to another'''
-        if isinstance(other, basestring):
+        if isinstance(other, string_type):
             _other = self.parse(other, 'utf-8')
         else:
-            _other = self.parse(other.utf8(), 'utf-8')
+            _other = self.parse(str(other), 'utf-8')
 
-        _self = self.parse(self.utf8(), 'utf-8')
+        _self = self.parse(str(self), 'utf-8')
         _self.canonical().defrag().abspath().escape().punycode()
         _other.canonical().defrag().abspath().escape().punycode()
 
@@ -154,7 +178,7 @@ class URL(object):
 
     def __eq__(self, other):
         '''Return true if this url is /exactly/ equal to another'''
-        if isinstance(other, basestring):
+        if isinstance(other, string_type):
             return self.__eq__(self.parse(other, 'utf-8'))
         return (
             self._scheme   == other._scheme   and
@@ -170,10 +194,19 @@ class URL(object):
         return not self.__eq__(other)
 
     def __str__(self):
-        return self.utf8()
+        netloc = self._host or ''
+        if self._port:
+            netloc += (':' + str(self._port))
+
+        if self._userinfo is not None:
+            netloc = '%s@%s' % (self._userinfo, netloc)
+
+        result = urlunparse((self._scheme, netloc, self._path, self._params,
+                            self._query, self._fragment))
+        return result
 
     def __repr__(self):
-        return '<url.URL object "%s" >' % self.utf8()
+        return '<url.URL object "%s" >' % str(self)
 
     def canonical(self):
         '''Canonicalize this url. This includes reordering parameters and args
@@ -247,7 +280,11 @@ class URL(object):
                 if string in safe:
                     return string
                 else:
-                    return '%%%02X' % ord(string)
+                    if sys.version_info[0] == 3:
+                        e = ['%%%02X' % b for b in string.encode('utf-8')]
+                        return ''.join(e)
+                    else:
+                        return '%%%02X' % ord(string)
             else:
                 # Replace any escaped entities with their equivalent if needed.
                 character = chr(int(match.group(2), 16))
@@ -288,41 +325,41 @@ class URL(object):
 
     def encode(self, encoding):
         '''Return the url in an arbitrary encoding'''
-        netloc = self._host or ''
-        if self._port:
-            netloc += (':' + str(self._port))
-
-        if self._userinfo is not None:
-            netloc = '%s@%s' % (self._userinfo, netloc)
-
-        result = urlunparse((self._scheme, netloc, self._path, self._params,
-                            self._query, self._fragment))
-        if encoding != 'utf-8':
-            result = result.decode('utf-8').encode(encoding)
-
-        return result
+        if sys.version_info[0] == 3:
+            return str(self).encode(encoding)
+        else:
+            return str(self).decode('utf-8').encode(encoding)
 
     def relative(self, path, encoding='utf-8'):
         '''Evaluate the new path relative to the current url'''
-        if isinstance(path, str):
+        if isinstance(path, byte_string):
             path = path.decode(encoding)
-        path = unicodenormalize('NFC', path).encode('utf-8')
-
-        newurl = urljoin(self.utf8(), path)
+        path = unicodenormalize('NFC', path)
+        if sys.version_info[0] == 3:
+            newurl = urljoin(self.unicode(), path)
+        else:
+            newurl = urljoin(self.utf8(), path.encode('utf-8'))
 
         return URL.parse(newurl, 'utf-8')
 
     def punycode(self):
         '''Convert to punycode hostname'''
         if self._host:
-            self._host = self._host.decode('utf-8').encode('idna')
+            if sys.version_info[0] == 2:
+                self._host = self._host.decode('utf-8')
+            self._host = self._host.encode('idna')
+            if sys.version_info[0] == 3:
+                self._host = self._host.decode('utf-8')
             return self
         raise TypeError('Cannot punycode a relative url (%s)' % repr(self))
 
     def unpunycode(self):
         '''Convert to an unpunycoded hostname'''
         if self._host:
-            self._host = self._host.decode('utf-8').decode('idna').encode('utf-8')
+            if sys.version_info[0] == 3:
+                self._host = self._host.encode('utf-8').decode('idna')
+            else:
+                self._host = self._host.decode('utf-8').decode('idna').encode('utf-8')
             return self
         raise TypeError('Cannot unpunycode a relative url (%s)' % repr(self))
 
@@ -333,7 +370,10 @@ class URL(object):
         '''Return the 'pay-level domain' of the url
             (http://moz.com/blog/what-the-heck-should-we-call-domaincom)'''
         if self._host:
-            return psl.get_public_suffix(self._host)
+            result = psl.get_public_suffix(self._host)
+            if sys.version_info[0] == 2:
+                resunt = result.encode('utf-8')
+            return result
         return ''
 
     def tld(self):
@@ -356,8 +396,14 @@ class URL(object):
     ###########################################################################
     def unicode(self):
         '''Return a unicode version of this url'''
-        return self.encode('utf-8').decode('utf-8')
+        if sys.version_info[0] == 3:
+            return str(self)
+        else:
+            return str(self).decode('utf-8')
 
     def utf8(self):
         '''Return a utf-8 version of this url'''
-        return self.encode('utf-8')
+        if sys.version_info[0] == 3:
+            return str(self).encode('utf-8')
+        else:
+            return str(self)
