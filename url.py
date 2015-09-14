@@ -96,6 +96,20 @@ class URL(object):
             parsed.path, parsed.params, parsed.query, parsed.fragment, userinfo)
 
     def __init__(self, scheme, host, port, path, params, query, fragment, userinfo=None):
+        if isinstance(scheme, unicode):
+            scheme = scheme.encode('utf-8')
+        if isinstance(host, unicode):
+            host = host.encode('utf-8')
+        if isinstance(path, unicode):
+            path = path.encode('utf-8')
+        if isinstance(params, unicode):
+            params = params.encode('utf-8')
+        if isinstance(query, unicode):
+            query = query.encode('utf-8')
+        if isinstance(fragment, unicode):
+            fragment = fragment.encode('utf-8')
+        if isinstance(userinfo, unicode):
+            userinfo = userinfo.encode('utf-8')
         self._scheme = scheme
         self._host = host
         self._port = port
@@ -227,9 +241,6 @@ class URL(object):
 
     @staticmethod
     def percent_encode(raw, safe):
-        if isinstance(raw, unicode):
-            raw = raw.encode('utf-8')
-
         def replacement(match):
             string = match.group(1)
             if len(string) == 1:
